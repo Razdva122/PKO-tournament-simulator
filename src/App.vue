@@ -91,15 +91,9 @@
 </template>
 
 <script lang="ts">
-import { Options, Vue } from 'vue-class-component'
-import HelloWorld from './components/HelloWorld.vue'
+import { Vue } from 'vue-class-component'
 import { IGameState, TGameHistory, TGameAction, TGameActionWithTime, IPlayer } from './interface'
 
-@Options({
-  components: {
-    HelloWorld
-  }
-})
 export default class App extends Vue {
   gameState: IGameState | null = null;
 
