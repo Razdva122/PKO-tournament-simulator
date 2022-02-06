@@ -2,12 +2,16 @@ export interface IPlayer {
   name: string;
   bounty: number;
   state: 'dead' | 'alive';
+  deadTime?: number;
+  entries: number;
   payOutBounty: number;
 }
 
 export interface IGameState {
   players: IPlayer[];
+  isGameEnded: boolean;
   buyIn: number;
+  type: 'bounty' | 'regular';
 
   prizePool: {
     prize: number;
@@ -31,7 +35,17 @@ export interface IGameActionKO {
   loser: string;
 }
 
-export type TGameAction = IGameActionBuyIn | IGameActionKO;
+export interface IGameActionRebuy {
+  type: 'Rebuy';
+  name: string;
+  number: number;
+}
+
+export interface IGameActionEnd {
+  type: 'End';
+}
+
+export type TGameAction = IGameActionBuyIn | IGameActionKO | IGameActionRebuy | IGameActionEnd;
 
 export type TGameActionWithTime = TGameAction & {time: string};
 
