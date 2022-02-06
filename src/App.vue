@@ -248,16 +248,15 @@ export default class App extends Vue {
         winner.payOutBounty += loser.bounty / 2
       }
 
+      loser.state = 'dead'
       loser.deadTime = Date.now()
 
       if (this.activePlayersList.length === 2) {
         winner.state = 'dead'
-        winner.deadTime = Date.now()
+        winner.deadTime = Date.now() + 1000
 
         this.$nextTick(() => this.makeAction({ type: 'End' }))
       }
-
-      loser.state = 'dead'
     }
 
     if (action.type === 'End') {
