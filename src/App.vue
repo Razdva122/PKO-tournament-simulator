@@ -251,7 +251,7 @@ export default class App extends Vue {
       loser.state = 'dead'
       loser.deadTime = Date.now()
 
-      if (this.activePlayersList.length === 2) {
+      if (this.activePlayersList.length === 1) {
         winner.state = 'dead'
         winner.deadTime = Date.now() + 1000
 
