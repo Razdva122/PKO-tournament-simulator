@@ -72,10 +72,18 @@
             {{ player.name }} {{ player.entries > 1 ? `(${player.entries})` : '' }}
           </span>
           <span>
-            Баунти: {{ player.bounty / 2}}
+            Баунти: {{ Math.floor(player.bounty / 2)}}
           </span>
-          <span @click="toggleShowDiff">
-            {{ showDiff ? `Профит: ${player.payOutBounty - player.entries * gameState.buyIn}` : `Выплата: ${player.payOutBounty}` }}
+          <span @click="toggleMoneyShowType">
+            <template v-if="moneyShowType === 'Profit'">
+              Выплата: {{ Math.floor(player.payOutBounty) }}
+            </template>
+            <template v-else-if="moneyShowType === 'Diff'">
+              Прибыль: {{ Math.floor(player.payOutBounty - player.entries * gameState.buyIn) }}
+            </template>
+            <template v-else-if="moneyShowType === 'BuyIns'">
+              Входы: {{ Math.floor(player.entries * gameState.buyIn) }}
+            </template>
           </span>
         </div>
         <h4>{{ isGameEnded ? 'Результаты' : 'Выбыли' }}</h4>
@@ -84,10 +92,18 @@
             {{i + activePlayersList.length + 1}}) {{ player.name }} {{ player.entries > 1 ? `(${player.entries})` : '' }}
           </span>
           <span>
-            Баунти: {{ player.bounty / 2}}
+            Баунти: {{ Math.floor(player.bounty / 2)}}
           </span>
-          <span @click="toggleShowDiff">
-            {{ showDiff ? `Профит: ${player.payOutBounty - player.entries * gameState.buyIn}` : `Выплата: ${player.payOutBounty}` }}
+          <span @click="toggleMoneyShowType">
+            <template v-if="moneyShowType === 'Profit'">
+              Выплата: {{ Math.floor(player.payOutBounty) }}
+            </template>
+            <template v-else-if="moneyShowType === 'Diff'">
+              Прибыль: {{ Math.floor(player.payOutBounty - player.entries * gameState.buyIn) }}
+            </template>
+            <template v-else-if="moneyShowType === 'BuyIns'">
+              Входы: {{ Math.floor(player.entries * gameState.buyIn) }}
+            </template>
           </span>
         </div>
       </div>
@@ -116,7 +132,11 @@
 
 <script lang="ts">
 import { Vue } from 'vue-class-component'
-import { IGameState, TGameHistory, TGameAction, TGameActionWithTime, IPlayer, IGameActionRebuy } from './interface'
+import {
+  IGameState, TGameHistory, TGameAction,
+  TGameActionWithTime, IPlayer, IGameActionRebuy,
+  TMoneyDisplay
+} from './interface'
 import { nameNormalizer } from './helpers'
 
 export default class App extends Vue {
@@ -135,7 +155,7 @@ export default class App extends Vue {
   loserKO = '';
   instaRebuy = false;
 
-  showDiff = false;
+  moneyShowType: TMoneyDisplay = 'Profit';
 
   get gameHistoryReversed (): TGameHistory {
     return [...this.gameHistory].reverse()
@@ -312,8 +332,14 @@ export default class App extends Vue {
     this.gameHistory = JSON.parse(localStorage.getItem('pokerTournamentHistory')!)
   }
 
-  toggleShowDiff (): void {
-    this.showDiff = !this.showDiff
+  toggleMoneyShowType (): void {
+    if (this.moneyShowType === 'Profit') {
+      this.moneyShowType = 'Diff'
+    } else if (this.moneyShowType === 'Diff') {
+      this.moneyShowType = 'BuyIns'
+    } else if (this.moneyShowType === 'BuyIns') {
+      this.moneyShowType = 'Profit'
+    }
   }
 }
 </script>

@@ -50,3 +50,5 @@ export type TGameAction = IGameActionBuyIn | IGameActionKO | IGameActionRebuy | 
 export type TGameActionWithTime = TGameAction & {time: string};
 
 export type TGameHistory = Array<{state: IGameState; action: TGameActionWithTime}>;
+
+export type TMoneyDisplay = 'BuyIns' | 'Profit' | 'Diff';
