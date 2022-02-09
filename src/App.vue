@@ -28,11 +28,14 @@
       <button class="app__green-button" @click="createTournament">Создать турнир</button>
     </div>
     <div v-if="isPrevStateExist">
-      <button class="app__green-button" @click="restoreLastTournament">Восстановить последний турнир</button>
+      <button class="app__green-button" @click="restoreLastTournament">Восстановить турнир</button>
     </div>
   </div>
   <div v-else>
-    <h1>Банк / Призовой: {{ gameState.prizePool.prize }} / Награды за выбивание: {{ gameState.prizePool.bounty }}</h1>
+    <h1>Банк / Призовой: {{ gameState.prizePool.prize }}
+      <template v-if="isBountyTournament">/ Награды за выбивание: {{ gameState.prizePool.bounty }}
+      </template>
+    </h1>
     <div class="app__tournament-actions" v-if="!isGameEnded">
       <div class="app__tournament-buyin app__input">
         <label for="buyInName">Новый игрок (Buy IN)</label>
@@ -51,7 +54,7 @@
                 {{ player.name }}
               </option>
             </select>
-            Луз: <select v-model="loserKO">
+            Луз: <select v-model="loser">
               <option disabled value="">Игрок</option>
               <option v-for="player in activePlayersList" :key="player.name">
                 {{ player.name }}
@@ -63,15 +66,31 @@
           </div>
         </div>
       </template>
+      <template v-else>
+        <div class="app__tournament-ko app__input">
+          <label>Аут</label>
+          <div>
+            Луз: <select v-model="loser">
+              <option disabled value="">Игрок</option>
+              <option v-for="player in activePlayersList" :key="player.name">
+                {{ player.name }}
+              </option>
+            </select>
+            <button class="app__red-button" @click="outPlayer">Аут</button>
+            <input class="app__input-checkbox" type="checkbox" id="checkbox" v-model="instaRebuy">
+            <label for="checkbox">Лузер ребай: {{instaRebuy ? 'Да' : 'Нет'}}</label>
+          </div>
+        </div>
+      </template>
     </div>
     <div class="app__main-content">
       <div class="app__tournament-players">
         <h3>Список игроков</h3>
-        <div class="app__tournament-player" v-for="player, i in activePlayersList" :key="i">
+        <div class="app__tournament-player" :class="{ bounty: isBountyTournament }" v-for="player, i in activePlayersList" :key="i">
           <span>
             {{ player.name }} {{ player.entries > 1 ? `(${player.entries})` : '' }}
           </span>
-          <span>
+          <span v-show="isBountyTournament">
             Баунти: {{ Math.floor(player.bounty / 2)}}
           </span>
           <span @click="toggleMoneyShowType">
@@ -87,11 +106,11 @@
           </span>
         </div>
         <h4>{{ isGameEnded ? 'Результаты' : 'Выбыли' }}</h4>
-        <div class="app__players-dead app__tournament-player" v-for="player, i in unactivePlayersList" :key="i">
+        <div class="app__players-dead app__tournament-player" :class="{ bounty: isBountyTournament }" v-for="player, i in unactivePlayersList" :key="i">
           <span>
             {{i + activePlayersList.length + 1}}) {{ player.name }} {{ player.entries > 1 ? `(${player.entries})` : '' }}
           </span>
-          <span>
+          <span v-show="isBountyTournament">
             Баунти: {{ Math.floor(player.bounty / 2)}}
           </span>
           <span @click="toggleMoneyShowType">
@@ -120,6 +139,9 @@
           </template>
           <template v-else-if="historyEl.action.type === 'KO'">
             <span class="app__tournament-history-ko">Нокаут</span> / {{ historyEl.action.winner }} выбил {{ historyEl.action.loser }}
+          </template>
+           <template v-else-if="historyEl.action.type === 'OUT'">
+            <span class="app__tournament-history-ko">Аут</span> / {{ historyEl.action.loser }}
           </template>
           <template v-else>
             <span class="app__tournament-history-win">Победа</span> / {{ unactivePlayersList[0].name }}
@@ -152,7 +174,7 @@ export default class App extends Vue {
   buyInName = '';
 
   winnerKO = '';
-  loserKO = '';
+  loser = '';
   instaRebuy = false;
 
   moneyShowType: TMoneyDisplay = 'Profit';
@@ -279,6 +301,20 @@ export default class App extends Vue {
       }
     }
 
+    if (action.type === 'OUT') {
+      const loser = this.gameState.players.find((el) => el.name === action.loser && el.state === 'alive')!
+
+      loser.state = 'dead'
+      loser.deadTime = Date.now()
+
+      if (this.activePlayersList.length === 1) {
+        this.activePlayersList[0].deadTime = Date.now() + 1000
+        this.activePlayersList[0].state = 'dead'
+
+        this.$nextTick(() => this.makeAction({ type: 'End' }))
+      }
+    }
+
     if (action.type === 'End') {
       this.gameState.isGameEnded = true
     }
@@ -308,22 +344,37 @@ export default class App extends Vue {
   }
 
   knockoutPlayer (): void {
-    if (!this.winnerKO || !this.loserKO) {
+    if (!this.winnerKO || !this.loser) {
       return
     }
 
-    if (this.winnerKO === this.loserKO) {
+    if (this.winnerKO === this.loser) {
       return
     }
 
-    this.makeAction({ type: 'KO', winner: this.winnerKO, loser: this.loserKO })
+    this.makeAction({ type: 'KO', winner: this.winnerKO, loser: this.loser })
 
     if (this.instaRebuy) {
-      this.makeAction({ type: 'BuyIn', name: this.loserKO })
+      this.makeAction({ type: 'BuyIn', name: this.loser })
     }
 
     this.winnerKO = ''
-    this.loserKO = ''
+    this.loser = ''
+    this.instaRebuy = false
+  }
+
+  outPlayer (): void {
+    if (!this.loser) {
+      return
+    }
+
+    this.makeAction({ type: 'OUT', loser: this.loser })
+
+    if (this.instaRebuy) {
+      this.makeAction({ type: 'BuyIn', name: this.loser })
+    }
+
+    this.loser = ''
     this.instaRebuy = false
   }
 
@@ -354,6 +405,13 @@ export default class App extends Vue {
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+
+@media screen and (max-width: 769px) {
+  #app {
+    margin: 0;
+    max-width: calc(100% - 60px);
+  }
 }
 
 h3 {
@@ -432,8 +490,12 @@ h4 {
   justify-content: center;
 }
 
+.app__tournament-players.bounty {
+  width: 683px;
+}
+
 .app__tournament-players {
-  width: 663px;
+  width: 472px;
 }
 
 .app__tournament-history {
@@ -481,7 +543,7 @@ h4 {
 }
 
 .app__tournament-player span:nth-child(1) {
-  width: 200px;
+  width: 220px;
 }
 
 .app__tournament-player span:nth-child(2) {

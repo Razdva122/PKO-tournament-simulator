@@ -35,6 +35,11 @@ export interface IGameActionKO {
   loser: string;
 }
 
+export interface IGameActionOUT {
+  type: 'OUT';
+  loser: string;
+}
+
 export interface IGameActionRebuy {
   type: 'Rebuy';
   name: string;
@@ -45,7 +50,7 @@ export interface IGameActionEnd {
   type: 'End';
 }
 
-export type TGameAction = IGameActionBuyIn | IGameActionKO | IGameActionRebuy | IGameActionEnd;
+export type TGameAction = IGameActionBuyIn | IGameActionKO | IGameActionRebuy | IGameActionEnd | IGameActionOUT;
 
 export type TGameActionWithTime = TGameAction & {time: string};
 
