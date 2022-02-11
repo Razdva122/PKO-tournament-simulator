@@ -70,15 +70,19 @@
         <div class="app__tournament-ko app__input">
           <label>Аут</label>
           <div>
-            Луз: <select v-model="loser">
+            <div>
+              Луз: <select v-model="loser">
               <option disabled value="">Игрок</option>
               <option v-for="player in activePlayersList" :key="player.name">
                 {{ player.name }}
               </option>
-            </select>
-            <button class="app__red-button" @click="outPlayer">Аут</button>
-            <input class="app__input-checkbox" type="checkbox" id="checkbox" v-model="instaRebuy">
-            <label for="checkbox">Лузер ребай: {{instaRebuy ? 'Да' : 'Нет'}}</label>
+              </select>
+              <button class="app__red-button" @click="outPlayer">Аут</button>
+            </div>
+            <div>
+              <input class="app__input-checkbox" type="checkbox" id="checkbox" v-model="instaRebuy">
+              <label for="checkbox">Лузер ребай: {{instaRebuy ? 'Да' : 'Нет'}}</label>
+            </div>
           </div>
         </div>
       </template>
@@ -396,6 +400,8 @@ export default class App extends Vue {
 </script>
 
 <style>
+* { -moz-box-sizing: border-box; -webkit-box-sizing: border-box; -ms-box-sizing: border-box; box-sizing: border-box; }
+
 #app {
   margin-right: 20px;
   margin-left: 20px;
@@ -405,13 +411,6 @@ export default class App extends Vue {
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
-}
-
-@media screen and (max-width: 769px) {
-  #app {
-    margin: 0;
-    max-width: calc(100% - 60px);
-  }
 }
 
 h3 {
@@ -552,5 +551,44 @@ h4 {
 
 .app__tournament-player span:nth-child(3) {
   width: 250px;
+}
+
+@media screen and (max-width: 1000px) {
+  #app {
+    margin: auto;
+    max-width: 100%;
+  }
+
+  .app__tournament-actions {
+    flex-direction: column;
+  }
+
+  .app__main-content {
+    flex-direction: column;
+  }
+
+  .app__tournament-players {
+    width: 100%;
+  }
+
+  .app__tournament-player span:nth-child(1) {
+    width: 40%;
+  }
+
+  .app__tournament-player span:nth-child(3) {
+    width: 60%;
+  }
+
+  .app__tournament-history {
+    min-width: 100%;
+  }
+
+  .app__main-content div {
+    font-size: 24px;
+  }
+
+  .app__tournament-buyin {
+    margin-right: 0;
+  }
 }
 </style>
