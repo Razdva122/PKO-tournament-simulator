@@ -38,11 +38,25 @@
     </h1>
     <div class="app__tournament-actions" v-if="!isGameEnded">
       <div class="app__tournament-buyin app__input">
-        <label for="buyInName">Новый игрок (Buy IN)</label>
-        <div>
-          <input type="text" name="buyInName" id="buyInName" v-model="buyInName">
-          <button class="app__green-button" @click="addPlayer">Добавить</button>
-        </div>
+        <template v-if="entryShowType === 'BuyIn'">
+          <label @click="toggleBuyInType" for="buyInName">Новый игрок (Buy IN)</label>
+          <div>
+            <input type="text" name="buyInName" id="buyInName" v-model="buyInName">
+            <button class="app__green-button" @click="addPlayer">Добавить</button>
+          </div>
+        </template>
+        <template v-else>
+          <label @click="toggleBuyInType" for="addonName">Аддон</label>
+          <div>
+            <select v-model="addonName">
+              <option disabled value="">Имя</option>
+              <option v-for="player in activePlayersList" :key="player.name">
+                {{ player.name }}
+              </option>
+            </select>
+            <button class="app__green-button" @click="addonPlayer">Докуп</button>
+          </div>
+        </template>
       </div>
       <template v-if="isBountyTournament">
         <div class="app__tournament-ko app__input">
@@ -92,7 +106,7 @@
         <h3>Список игроков</h3>
         <div class="app__tournament-player" :class="{ bounty: isBountyTournament }" v-for="player, i in activePlayersList" :key="i">
           <span>
-            {{ player.name }} {{ player.entries > 1 ? `(${player.entries})` : '' }}
+            {{ player.name }} {{ player.entries + player.addon > 1 ? `(${player.entries}+${player.addon})` : '' }}
           </span>
           <span v-show="isBountyTournament">
             Баунти: {{ Math.floor(player.bounty / 2)}}
@@ -102,17 +116,17 @@
               Выплата: {{ Math.floor(player.payOutBounty) }}
             </template>
             <template v-else-if="moneyShowType === 'Diff'">
-              Прибыль: {{ Math.floor(player.payOutBounty - player.entries * gameState.buyIn) }}
+              Прибыль: {{ Math.floor(player.payOutBounty - (player.entries + player.addon) * gameState.buyIn) }}
             </template>
             <template v-else-if="moneyShowType === 'BuyIns'">
-              Входы: {{ Math.floor(player.entries * gameState.buyIn) }}
+              Входы: {{ Math.floor((player.entries + player.addon) * gameState.buyIn) }}
             </template>
           </span>
         </div>
         <h4>{{ isGameEnded ? 'Результаты' : 'Выбыли' }}</h4>
         <div class="app__players-dead app__tournament-player" :class="{ bounty: isBountyTournament }" v-for="player, i in unactivePlayersList" :key="i">
           <span>
-            {{i + activePlayersList.length + 1}}) {{ player.name }} {{ player.entries > 1 ? `(${player.entries})` : '' }}
+            {{i + activePlayersList.length + 1}}) {{ player.name }} {{ player.entries + player.addon > 1 ? `(${player.entries}+${player.addon})` : '' }}
           </span>
           <span v-show="isBountyTournament">
             Баунти: {{ Math.floor(player.bounty / 2)}}
@@ -122,10 +136,10 @@
               Выплата: {{ Math.floor(player.payOutBounty) }}
             </template>
             <template v-else-if="moneyShowType === 'Diff'">
-              Прибыль: {{ Math.floor(player.payOutBounty - player.entries * gameState.buyIn) }}
+              Прибыль: {{ Math.floor(player.payOutBounty - (player.entries + player.addon) * gameState.buyIn) }}
             </template>
             <template v-else-if="moneyShowType === 'BuyIns'">
-              Входы: {{ Math.floor(player.entries * gameState.buyIn) }}
+              Входы: {{ Math.floor((player.entries + player.addon) * gameState.buyIn) }}
             </template>
           </span>
         </div>
@@ -144,8 +158,11 @@
           <template v-else-if="historyEl.action.type === 'KO'">
             <span class="app__tournament-history-ko">Нокаут</span> / {{ historyEl.action.winner }} выбил {{ historyEl.action.loser }}
           </template>
-           <template v-else-if="historyEl.action.type === 'OUT'">
+          <template v-else-if="historyEl.action.type === 'OUT'">
             <span class="app__tournament-history-ko">Аут</span> / {{ historyEl.action.loser }}
+          </template>
+          <template v-else-if="historyEl.action.type === 'Addon'">
+            <span class="app__tournament-history-addon">Аддон</span> / {{ historyEl.action.name }}
           </template>
           <template v-else>
             <span class="app__tournament-history-win">Победа</span> / {{ unactivePlayersList[0].name }}
@@ -161,7 +178,7 @@ import { Vue } from 'vue-class-component'
 import {
   IGameState, TGameHistory, TGameAction,
   TGameActionWithTime, IPlayer, IGameActionRebuy,
-  TMoneyDisplay
+  TMoneyDisplay, TEntryType
 } from './interface'
 import { nameNormalizer } from './helpers'
 
@@ -176,12 +193,15 @@ export default class App extends Vue {
   tournamentType: IGameState['type'] = 'regular';
 
   buyInName = '';
+  addonName = '';
 
   winnerKO = '';
   loser = '';
   instaRebuy = false;
 
   moneyShowType: TMoneyDisplay = 'Profit';
+
+  entryShowType: TEntryType = 'BuyIn';
 
   get gameHistoryReversed (): TGameHistory {
     return [...this.gameHistory].reverse()
@@ -273,10 +293,21 @@ export default class App extends Vue {
           name: action.name,
           bounty: this.gameState.buyIn * this.gameState.division.bounty,
           state: 'alive',
+          addon: 0,
           entries: 1,
           payOutBounty: 0
         })
       }
+
+      this.gameState.prizePool.prize += this.gameState.buyIn * this.gameState.division.prize
+      this.gameState.prizePool.bounty += this.gameState.buyIn * this.gameState.division.bounty
+    }
+
+    if (action.type === 'Addon') {
+      const player = this.gameState.players.find((el) => el.name === action.name && el.state === 'alive')!
+
+      player.addon += 1
+      player.bounty += this.gameState.buyIn * this.gameState.division.bounty
 
       this.gameState.prizePool.prize += this.gameState.buyIn * this.gameState.division.prize
       this.gameState.prizePool.bounty += this.gameState.buyIn * this.gameState.division.bounty
@@ -347,6 +378,21 @@ export default class App extends Vue {
     this.buyInName = ''
   }
 
+  addonPlayer (): void {
+    if (!this.addonName) {
+      return
+    }
+
+    const playerNameNormalized = nameNormalizer(this.addonName)
+
+    if (!this.activePlayersList.some(el => el.name === playerNameNormalized)) {
+      return
+    }
+
+    this.makeAction({ type: 'Addon', name: playerNameNormalized })
+    this.addonName = ''
+  }
+
   knockoutPlayer (): void {
     if (!this.winnerKO || !this.loser) {
       return
@@ -394,6 +440,14 @@ export default class App extends Vue {
       this.moneyShowType = 'BuyIns'
     } else if (this.moneyShowType === 'BuyIns') {
       this.moneyShowType = 'Profit'
+    }
+  }
+
+  toggleBuyInType (): void {
+    if (this.entryShowType === 'Addon') {
+      this.entryShowType = 'BuyIn'
+    } else if (this.entryShowType === 'BuyIn') {
+      this.entryShowType = 'Addon'
     }
   }
 }
@@ -520,6 +574,10 @@ h4 {
 
 .app__tournament-history-ko {
   color:red;
+}
+
+.app__tournament-history-addon {
+  color:#c5c9c7;
 }
 
 .app__tournament-history-win {

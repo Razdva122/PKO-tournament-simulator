@@ -4,6 +4,7 @@ export interface IPlayer {
   state: 'dead' | 'alive';
   deadTime?: number;
   entries: number;
+  addon: number;
   payOutBounty: number;
 }
 
@@ -50,10 +51,17 @@ export interface IGameActionEnd {
   type: 'End';
 }
 
-export type TGameAction = IGameActionBuyIn | IGameActionKO | IGameActionRebuy | IGameActionEnd | IGameActionOUT;
+export interface IGameActionAddon {
+  type: 'Addon';
+  name: string;
+}
+
+export type TGameAction = IGameActionBuyIn | IGameActionKO | IGameActionRebuy | IGameActionEnd | IGameActionOUT | IGameActionAddon;
 
 export type TGameActionWithTime = TGameAction & {time: string};
 
 export type TGameHistory = Array<{state: IGameState; action: TGameActionWithTime}>;
 
 export type TMoneyDisplay = 'BuyIns' | 'Profit' | 'Diff';
+
+export type TEntryType = 'Addon' | 'BuyIn';
