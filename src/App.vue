@@ -494,7 +494,7 @@ h4 {
 }
 
 .app__tournament-players {
-  width: 472px;
+  width: 680px;
 }
 
 .app__tournament-history {

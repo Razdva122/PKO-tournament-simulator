@@ -1,5 +1,9 @@
 # ko-poker
 
+## Link
+
+https://razdva122.github.io/PKO-tournament-simulator/
+
 ## Project setup
 ```
 npm install
