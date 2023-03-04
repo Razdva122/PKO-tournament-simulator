@@ -10,5 +10,5 @@ cd dist
 git init
 git add -A
 git commit -m 'deploy'
-git push -f git@github.com:razdva122/PKO-tournament-simulator.git master:gh-pages
+git push -f git@github.com:razdva122/PKO-tournament-simulator.git main:gh-pages
 cd -
