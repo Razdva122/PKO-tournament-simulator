@@ -36,7 +36,7 @@
       <template v-if="isBountyTournament">/ Награды за выбивание: {{ gameState.prizePool.bounty }}
       </template>
     </h1>
-    <div class="app__tournament-actions" v-if="!isGameEnded">
+    <div class="app__tournament-actions" v-if="!isGameEnded && mode !== 'view'">
       <div class="app__tournament-buyin app__input">
         <template v-if="entryShowType === 'BuyIn'">
           <label @click="toggleBuyInType" for="buyInName">Новый игрок (Buy IN)</label>
@@ -146,7 +146,7 @@
       </div>
 
       <div class="app__tournament-history">
-        <h3>История <button class="app__red-button" @click="revertLastAction">Отменить</button></h3>
+        <h3>История <button v-if="mode !== 'view'" class="app__red-button" @click="revertLastAction">Отменить</button></h3>
         <div class="app__tournament-history-element" v-for="historyEl, i in gameHistoryReversed" :key="i">
           {{ historyEl.action.time }} /
           <template v-if="historyEl.action.type === 'BuyIn'">
@@ -174,6 +174,7 @@
 </template>
 
 <script lang="ts">
+/* eslint-disable */
 import { Vue } from 'vue-class-component'
 import {
   IGameState, TGameHistory, TGameAction,
@@ -181,6 +182,8 @@ import {
   TMoneyDisplay, TEntryType
 } from './interface'
 import { nameNormalizer } from './helpers'
+
+import { socket } from './socket'
 
 export default class App extends Vue {
   gameState: IGameState | null = null;
@@ -202,6 +205,23 @@ export default class App extends Vue {
   moneyShowType: TMoneyDisplay = 'Profit';
 
   entryShowType: TEntryType = 'BuyIn';
+
+	id = new URLSearchParams(new URL(location.href).search).get('id');
+	mode = new URLSearchParams(new URL(location.href).search).get('mode');
+
+	created(): void {
+		if (this.id) {
+			socket.emitWithAck('joinTournament', this.id).then(({state, history}) => {
+				this.gameState = state;
+				this.gameHistory = history;
+			});
+
+			socket.on('tournamentUpdated', ({state, history}) => {
+				this.gameState = state;
+				this.gameHistory = history;
+			});
+		}
+	}
 
   get gameHistoryReversed (): TGameHistory {
     return [...this.gameHistory].reverse()
@@ -235,7 +255,7 @@ export default class App extends Vue {
     return Boolean(localStorage.getItem('pokerTournamentState')) && Boolean(localStorage.getItem('pokerTournamentState'))
   }
 
-  createTournament (): void {
+  async createTournament (): Promise<void> {
     this.gameState = {
       isGameEnded: false,
       players: [],
@@ -252,12 +272,22 @@ export default class App extends Vue {
         bounty: this.tournamentType === 'bounty' ? this.bountySize / 100 : 0
       }
     }
+
+		const id = await socket.emitWithAck('createTournament', this.gameState);
+
+		const urlParams = new URLSearchParams(window.location.search);
+
+		urlParams.set('id', id);
+
+		window.location.search = String(urlParams);
   }
 
   revertLastAction (): void {
     const lastEl = this.gameHistory.splice(this.gameHistory.length - 1, 1)[0]
 
     this.gameState = lastEl.state
+
+		socket.emit('updateTournament', this.id, {state: this.gameState, history: this.gameHistory});
   }
 
   makeAction (action: TGameAction): void {
@@ -358,6 +388,8 @@ export default class App extends Vue {
       state: prevState,
       action: actionWithTime
     })
+
+		socket.emit('updateTournament', this.id, {state: this.gameState, history: this.gameHistory});
 
     localStorage.setItem('pokerTournamentState', JSON.stringify(this.gameState))
     localStorage.setItem('pokerTournamentHistory', JSON.stringify(this.gameHistory))
