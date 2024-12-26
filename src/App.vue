@@ -76,7 +76,8 @@
             </select>
             <button class="app__red-button" @click="knockoutPlayer">Нокаут</button>
             <input class="app__input-checkbox" type="checkbox" id="checkbox" v-model="instaRebuy">
-            <label for="checkbox">Лузер ребай: {{instaRebuy ? 'Да' : 'Нет'}}</label>
+            <label for="checkbox">Лузер ребай: {{instaRebuy ? 'Да' : 'Нет'}}, {{ doubleRebuy ? 'Двойной' : 'Одинарный' }}</label>
+						<input class="app__input-checkbox" type="checkbox" id="checkbox" v-model="doubleRebuy">
           </div>
         </div>
       </template>
@@ -175,6 +176,7 @@ export default class App extends Vue {
   winnerKO = '';
   loser = '';
   instaRebuy = false;
+	doubleRebuy = false;
 
   entryShowType: TEntryType = 'BuyIn';
 
@@ -324,10 +326,15 @@ export default class App extends Vue {
       const player = this.gameState.players.find((el) => el.name === action.name)
 
       if (player) {
+				if (player.state === 'alive') {
+					player.bounty += this.gameState.buyIn * this.gameState.division.bounty
+				} else {
+					player.bounty = this.gameState.buyIn * this.gameState.division.bounty
+				}
+
         player.state = 'alive'
         player.entries += 1
         player.deadTime = undefined
-        player.bounty = this.gameState.buyIn * this.gameState.division.bounty
 
         const rebuyAction = actionWithTime as IGameActionRebuy
 
@@ -417,10 +424,6 @@ export default class App extends Vue {
 
     const playerNameNormalized = nameNormalizer(this.buyInName)
 
-    if (this.activePlayersList.some(el => el.name === playerNameNormalized)) {
-      return
-    }
-
     this.makeAction({ type: 'BuyIn', name: playerNameNormalized })
     this.buyInName = ''
   }
@@ -453,11 +456,16 @@ export default class App extends Vue {
 
     if (this.instaRebuy) {
       this.makeAction({ type: 'BuyIn', name: this.loser })
+
+			if (this.doubleRebuy) {
+				this.makeAction({ type: 'BuyIn', name: this.loser })
+			}
     }
 
     this.winnerKO = ''
     this.loser = ''
     this.instaRebuy = false
+		this.doubleRebuy = false
   }
 
   outPlayer (): void {
@@ -469,10 +477,15 @@ export default class App extends Vue {
 
     if (this.instaRebuy) {
       this.makeAction({ type: 'BuyIn', name: this.loser })
+
+			if (this.doubleRebuy) {
+				this.makeAction({ type: 'BuyIn', name: this.loser })
+			}
     }
 
     this.loser = ''
     this.instaRebuy = false
+		this.doubleRebuy = false
   }
 
   restoreLastTournament (): void {
