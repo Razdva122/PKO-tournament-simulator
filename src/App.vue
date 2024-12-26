@@ -103,46 +103,22 @@
     </div>
     <div class="app__main-content">
       <div class="app__tournament-players">
-        <h3>Список игроков</h3>
-        <div class="app__tournament-player" :class="{ bounty: isBountyTournament }" v-for="player, i in activePlayersList" :key="i">
-          <span>
-            {{ player.name }} {{ player.entries + player.addon > 1 ? `(${player.entries}+${player.addon})` : '' }}
-          </span>
-          <span v-show="isBountyTournament">
-            Баунти: {{ Math.floor(player.bounty / 2)}}
-          </span>
-          <span @click="toggleMoneyShowType">
-            <template v-if="moneyShowType === 'Profit'">
-              Выплата: {{ Math.floor(player.payOutBounty) }}
-            </template>
-            <template v-else-if="moneyShowType === 'Diff'">
-              Прибыль: {{ Math.floor(player.payOutBounty - (player.entries + player.addon) * gameState.buyIn) }}
-            </template>
-            <template v-else-if="moneyShowType === 'BuyIns'">
-              Входы: {{ Math.floor((player.entries + player.addon) * gameState.buyIn) }}
-            </template>
-          </span>
-        </div>
+				<template v-if="activePlayersList.length">
+					<h3>Список игроков</h3>
+					<EasyDataTable
+						table-class-name="customize-table"
+						:hide-footer="true"
+						:headers="getHeaders('activePlayersList')"
+						:items="getTableItems('activePlayersList')"
+					/>
+				</template>
         <h4>{{ isGameEnded ? 'Результаты' : 'Выбыли' }}</h4>
-        <div class="app__players-dead app__tournament-player" :class="{ bounty: isBountyTournament }" v-for="player, i in unactivePlayersList" :key="i">
-          <span>
-            {{i + activePlayersList.length + 1}}) {{ player.name }} {{ player.entries + player.addon > 1 ? `(${player.entries}+${player.addon})` : '' }}
-          </span>
-          <span v-show="isBountyTournament">
-            Баунти: {{ Math.floor(player.bounty / 2)}}
-          </span>
-          <span @click="toggleMoneyShowType">
-            <template v-if="moneyShowType === 'Profit'">
-              Выплата: {{ Math.floor(player.payOutBounty) }}
-            </template>
-            <template v-else-if="moneyShowType === 'Diff'">
-              Прибыль: {{ Math.floor(player.payOutBounty - (player.entries + player.addon) * gameState.buyIn) }}
-            </template>
-            <template v-else-if="moneyShowType === 'BuyIns'">
-              Входы: {{ Math.floor((player.entries + player.addon) * gameState.buyIn) }}
-            </template>
-          </span>
-        </div>
+				<EasyDataTable
+					table-class-name="customize-table"
+					:hide-footer="true"
+					:headers="getHeaders('unactivePlayersList')"
+					:items="getTableItems('unactivePlayersList')"
+				/>
       </div>
 
       <div class="app__tournament-history">
@@ -174,12 +150,10 @@
 </template>
 
 <script lang="ts">
-/* eslint-disable */
 import { Vue } from 'vue-class-component'
 import {
   IGameState, TGameHistory, TGameAction,
-  TGameActionWithTime, IPlayer, IGameActionRebuy,
-  TMoneyDisplay, TEntryType
+  TGameActionWithTime, IPlayer, IGameActionRebuy, TEntryType
 } from './interface'
 import { nameNormalizer } from './helpers'
 
@@ -201,8 +175,6 @@ export default class App extends Vue {
   winnerKO = '';
   loser = '';
   instaRebuy = false;
-
-  moneyShowType: TMoneyDisplay = 'Profit';
 
   entryShowType: TEntryType = 'BuyIn';
 
@@ -234,6 +206,49 @@ export default class App extends Vue {
 
     return players
   }
+
+	getHeaders(name: 'activePlayersList' | 'unactivePlayersList') {
+		if (name === 'unactivePlayersList') {
+			return [
+				{ text: "ИМЯ", value: "name" },
+				{ text: "ВХОД", value: "entries"},
+				{ text: "ВЫПЛАТА", value: "payOutBounty"}
+			]
+		}
+
+		return [
+			{ text: "ИМЯ", value: "name" },
+			{ text: "BOUNTY", value: "bounty"},
+			{ text: "ВХОД", value: "entries"},
+			{ text: "ВЫПЛАТА", value: "payOutBounty"}
+		]
+	}
+
+	getTableItems(name: 'activePlayersList' | 'unactivePlayersList') {
+		if (name === 'activePlayersList' && this.activePlayersList.length === 2) {
+			const firstPlayer = this.activePlayersList[0];
+			const secondPlayer = this.activePlayersList[1];
+	
+			return [{
+				name: firstPlayer.name,
+				entries: `${firstPlayer.entries}${firstPlayer.addon ? '+1' : ''}`,
+				bounty: Math.floor(Math.floor(firstPlayer.bounty / 2 + secondPlayer.bounty) / 100) * 100,
+				payOutBounty: Math.floor(firstPlayer.payOutBounty / 100) * 100
+			}, {
+				name: secondPlayer.name,
+				entries: `${secondPlayer.entries}${secondPlayer.addon ? '+1' : ''}`,
+				bounty: Math.floor(Math.floor(secondPlayer.bounty / 2 + firstPlayer.bounty) / 100) * 100,
+				payOutBounty: Math.floor(secondPlayer.payOutBounty / 100) * 100
+			}]
+		}
+
+		return this[name].map((el) => ({
+			name: el.name,
+			entries: `${el.entries}${el.addon ? '+1' : ''}`,
+			bounty: Math.floor(Math.floor(el.bounty / 2) / 100) * 100,
+			payOutBounty: Math.floor(el.payOutBounty / 100) * 100
+		}));
+	}
 
   get unactivePlayersList (): IPlayer[] {
     const players = this.gameState!.players.filter((el) => el.state === 'dead')
@@ -465,16 +480,6 @@ export default class App extends Vue {
     this.gameHistory = JSON.parse(localStorage.getItem('pokerTournamentHistory')!)
   }
 
-  toggleMoneyShowType (): void {
-    if (this.moneyShowType === 'Profit') {
-      this.moneyShowType = 'Diff'
-    } else if (this.moneyShowType === 'Diff') {
-      this.moneyShowType = 'BuyIns'
-    } else if (this.moneyShowType === 'BuyIns') {
-      this.moneyShowType = 'Profit'
-    }
-  }
-
   toggleBuyInType (): void {
     if (this.entryShowType === 'Addon') {
       this.entryShowType = 'BuyIn'
@@ -680,5 +685,17 @@ h4 {
   .app__tournament-buyin {
     margin-right: 0;
   }
+}
+
+.customize-table {
+  --easy-table-header-font-size: 18px;
+  --easy-table-header-height: 50px;
+
+  --easy-table-header-item-padding: 8px 12px;
+
+  --easy-table-body-row-height: 50px;
+  --easy-table-body-row-font-size: 18px;
+
+  --easy-table-body-item-padding: 8px 12px;
 }
 </style>
