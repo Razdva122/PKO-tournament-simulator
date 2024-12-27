@@ -12,6 +12,7 @@ export interface IGameState {
   players: IPlayer[];
   isGameEnded: boolean;
   buyIn: number;
+	stackSize?: number;
   type: 'bounty' | 'regular';
 
   prizePool: {

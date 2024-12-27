@@ -5,6 +5,10 @@
       <label for="buyIn">Вход в турнир</label>
       <input type="number" name="buyIn" id="buyIn" v-model="buyIn">
     </div>
+		<div class="app__input">
+      <label for="stackSize">Размер стека</label>
+      <input type="number" name="stackSize" id="stackSize" v-model="stackSize">
+    </div>
     <div class="app__input">
       <label for="buyIn">Тип турнира</label>
       <select class="app__input-tournament-type" v-model="tournamentType">
@@ -36,6 +40,9 @@
       <template v-if="isBountyTournament">/ Награды за выбивание: {{ gameState.prizePool.bounty }}
       </template>
     </h1>
+		<h2 v-if="gameState.stackSize && activePlayersList.length">
+			Средний стек: {{ avgStack }}
+		</h2>
     <div class="app__tournament-actions" v-if="!isGameEnded && mode !== 'view'">
       <div class="app__tournament-buyin app__input">
         <template v-if="entryShowType === 'BuyIn'">
@@ -166,6 +173,7 @@ export default class App extends Vue {
   gameHistory: TGameHistory = [];
 
   buyIn = 0;
+	stackSize = 0;
 
   bountySize = 0;
   tournamentType: IGameState['type'] = 'regular';
@@ -272,11 +280,26 @@ export default class App extends Vue {
     return Boolean(localStorage.getItem('pokerTournamentState')) && Boolean(localStorage.getItem('pokerTournamentState'))
   }
 
+	get avgStack(): number {
+		const stackSize = this.gameState!.stackSize || 0;
+
+		return this.gameState!.players.reduce((acc, el) => {
+			let total = el.entries * stackSize;
+
+			if (el.addon) {
+				total += stackSize * 2;
+			}
+
+			return acc + total;
+		}, 0) / this.activePlayersList.length;
+	}
+
   async createTournament (): Promise<void> {
     this.gameState = {
       isGameEnded: false,
       players: [],
       buyIn: this.buyIn,
+			stackSize: this.stackSize,
       type: this.tournamentType,
 
       prizePool: {
